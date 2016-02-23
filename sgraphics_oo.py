@@ -4,8 +4,20 @@ import math
 ################################################################################
 ################################################################################
 ################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 # CLASS Vector: Represents vectors. Provides corresponding vector operations
 #               and related methods.
+################################################################################
+################################################################################
+################################################################################
 
 class Vector:
   
@@ -21,7 +33,7 @@ class Vector:
     #       coordinates.
     def __init__(self, *v):
         self.__v = list(v)
-        self.dim = len(v)
+        self.__dim = len(v)
 
 
     # build_0(n) builds the R^n zero-vector
@@ -64,7 +76,8 @@ class Vector:
     ############################################################################
     # GETTERS: Functions to get a coordinate (projection onto basis), the vector
     #          itself in list form, the norm of the vector, the distance to
-    #          another vector, and the iterator function.
+    #          another vector, the dimension of vector, and the iterator
+    #          function.
     
 
     # get(i) gets self's ith coordinate.
@@ -88,6 +101,11 @@ class Vector:
         return math.sqrt(Vector.dot(v, v))
 
 
+    # get_dim() gets self's dimension (number of components).
+    def get_dim(self):
+        return self.__dim
+
+
     # __iter__() returns the list holding the vector coordinates.
     def __iter__(self):
         return iter(self.__v)
@@ -97,30 +115,30 @@ class Vector:
     ############################################################################
     # SETTER OPERATIONS: Methods to operate and mutate self. Includes addition,
     #                    subtraction, scalar multiplcation & division,
-    #                    projection, and perpendicular. These methods
-    #                    operate in the same memory location and mutate the 
-    #                    operand. They return self to allow chaining of
-    #                    operations.
+    #                    projection, and perpendicular, as well as adding and
+    #                    removing dimensions. These methods operate in the same
+    #                    memory location and mutate the operand. They return
+    #                    self to allow chaining of operations.
 
     # set_add(u) sets self to self + u, returns self.
     def set_add(self, u):
-        assert(u.dim == self.dim)
-        for i in range(self.dim):
+        assert(u.get_dim() == self.__dim)
+        for i in range(self.__dim):
             self.__v[i] += u.get(i)
         return self
     
 
     # set_sub(u) sets self to self - u, returns self.
     def set_sub(self, u):
-        assert(u.dim == self.dim)
-        for i in range(self.dim):
+        assert(u.get_dim() == self.__dim)
+        for i in range(self.__dim):
             self.__v[i] -= u.get(i)
         return self
     
 
     # set_smult(s) sets self to (scalar s) * self, returns self.
     def set_smult(self, s):
-        for i in range(self.dim):
+        for i in range(self.__dim):
             self.__v[i] *= s
         return self
 
@@ -128,46 +146,63 @@ class Vector:
     # set_sdiv(s) sets self to self / (scalar s), returns self.
     def set_sdiv(self, s):
         assert(s != 0)
-        for i in range(self.dim):
+        for i in range(self.__dim):
             self.__v[i] /= s
         return self
 
 
     # set_proj(a) sets self to the projection of self onto a, returns self.
     def set_proj(self, a):
-        assert(a.dim == self.dim)
+        assert(a.get_dim() == self.__dim)
         assert(any(a))
         sm = Vector.dot(self, a)/Vector.dot(a, a)
-        for i in range(self.dim):
+        for i in range(self.__dim):
             self.__v[i] = sm * a.get(i)
         return self
 
 
     # set_perp(a) sets self to the perpendicular of self onto a, returns self.
     def set_perp(self, a):
-        assert(a.dim == self.dim)
+        assert(a.get_dim() == self.__dim)
         assert(any(a))
         sm = Vector.dot(self, a)/Vector.dot(a, a)
         self.set_sub(Vector.smult(sm, a))
         return self
 
 
+    # set_addDim(init=0) sets self to self with an additional appended dimension
+    #       initialized to init.
+    def set_addDim(self, init=0):
+        self.__v += [init]
+        self.__dim += 1
+        return self
+
+
+    # set_remDim(n=-1) sets self to self with dimension n removed; default
+    #       dimension is the last dimension.
+    def set_remDim(self, n=-1):
+        self.__v.pop(n)
+        self.__dim -= 1
+        return self
+
+
+        
     
     ############################################################################
     # OPERATIONS: Class functions that operate on real numbers and Vector 
-    #             objects and return a reference to a new Vector / a real
-    #             number. These include vector functions for addition, 
-    #             subtraction, scalar multiplcation & division, projection, 
-    #             and perpendicular, As well as scalar functions for dot
-    #              product and norm/distance.
+    #             objects and return references to new Vectors / real
+    #             numbers. These include functions for addition, subtraction, 
+    #             scalar multiplcation & division, projection, perpendicular, 
+    #             dot product and norm/distance.
 
     # add(*vs) adds one or more vectors in vs together, returns the new sum
     #       vector.
     @classmethod
     def add(cls, *vs):
-        assert(v.dim == vs[0].dim for v in vs)
-        u = [0 for i in range(vs[0].dim)]
-        for i in range(vs[0].dim):
+        v_dim = vs[0].get_dim()
+        assert(v.get_dim() == v_dim for v in vs)
+        u = [0 for i in range(v_dim)]
+        for i in range(v_dim):
             u[i] = sum(map(lambda v: v.get(i), vs))
         return Vector(*tuple(u))
 
@@ -176,9 +211,10 @@ class Vector:
     #       new difference vector.
     @classmethod
     def sub(cls, *vs):
-        assert(v.dim == vs[0].dim for v in vs)
-        u = [vs[0].get(i) for i in range(vs[0].dim)]
-        for i in range(vs[0].dim):
+        v_dim = vs[0].get_dim()
+        assert(v.get_dim() == v_dim for v in vs)
+        u = [vs[0].get(i) for i in range(v_dim)]
+        for i in range(v_dim):
             u[i] -= sum(map(lambda v: v.get(i), vs[1:]))
         return Vector(*tuple(u))
 
@@ -201,8 +237,9 @@ class Vector:
     # dot(v, u) takes the dot product of v and u, returns a real number.
     @classmethod
     def dot(cls, v, u):
-        assert(v.dim == u.dim)
-        return sum([v.get(i)*u.get(i) for i in range(v.dim)])
+        v_dim = v.get_dim()
+        assert(v_dim == u.get_dim())
+        return sum([v.get(i)*u.get(i) for i in range(v_dim)])
 
 
     # proj(v, a) projects v onto a, returns the new projected vector.
@@ -240,9 +277,11 @@ class Vector:
     # DISPLAY / FORMATTING: Methods/functions that format Vectors for output
     def toString(self, col=False):
         if not col:
-            s = "[  "+"{:>7.6G}  "*self.dim+"]"
+            s = "[  "+"{:>7.6G}  "*self.__dim+"]"
         else:
-            s = "/ {:>7.6G} \\\n"+"| {:>7.6G} |\n"*(self.dim-2)+"\\ {:>7.6G} /"
+            s = "/ {:>7.6G} \\\n" + \
+                "| {:>7.6G} |\n"*(self.__dim-2) + \
+                "\\ {:>7.6G} /"
         return s.format(*tuple(self.__v))
 
     def print(self, col=False):
@@ -259,11 +298,22 @@ class Vector:
 ################################################################################
 ################################################################################
 ################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 # CLASS Vector3D: Represents vectors in R^3. Provides corresponding vector
 #                 operations and related methods.
+################################################################################
+################################################################################
+################################################################################
 
-# TODO: - create superclass "Vector" for general vectors in R^n
-#       - refactor Vector3D to be subclass of Vector; many methods can be
+# TODO: - refactor Vector3D to be subclass of Vector; many methods can be
 #           migrated and generalized
 
 class Vector3D(Vector):
@@ -548,9 +598,26 @@ class Vector3D(Vector):
 
 
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 # CLASS Matrix: Represents matrices of arbitrary size.
 # TODO: - entire thing
+################################################################################
+################################################################################
+################################################################################
 class Matrix:
+
+    __RESTRICTION = 0x1F8EAA2
      
     ############################################################################
     # CLASS VARIABLES:
@@ -559,18 +626,59 @@ class Matrix:
 
     ############################################################################
     # CONSTRUCTORS:
-    def __init__(self, nRows, nCols, *vs):
-        self.rows = rows
-        self.cols = cols
-        self.M = [v for v in vs]
+    def __init__(self, token, nRows, nCols, *rs):
+        assert(token == self.__RESTRICTION)
+        self.__nRows = nRows
+        self.__nCols = nCols
+        self.Ma = [r for r in rs]
         
+                
+    # build_fromRows(*rs) builds the matrix with rows from the lists in rs
+    @classmethod
+    def build_fromRows(cls, *rs):
+        r0_len = len(rs[0])
+        assert(len(r) == r0_len for r in rs)
+        return cls(cls.__RESTRICTION, len(rs), r0_len, *rs)
         
-        return something
-        # TODO
 
+    # build_fromCols(*cs) builds the matrix with columns from the lists in cs
+    @classmethod
+    def build_fromCols(cls, *cs):
+        c0_len = len(cs[0])
+        assert(len(c) == c0_len for c in cs)
+        rs = [[] for i in range(c0_len)]
+        for i in range(c0_len):
+            for j in range(len(cs)):
+                rs[i].append(cs[j][i])
+        return cls(cls.__RESTRICTION, c0_len, len(cs), *rs)
+
+
+    # build_fromVRows(*rs) builds the matrix with rows from row Vectors in rs
+    @classmethod
+    def build_fromVRows(cls, *rs):
+        r0_dim = rs[0].get_dim()
+        assert(r.get_dim() == r0_dim for r in rs)
+        return cls(cls.__RESTRICTION, len(rs), r0_dim, \
+                   *(r.get_list() for r in rs))
+
+
+    # build_fromVCols(*cs) builds the matrix with cols from col Vectors in cs
+    @classmethod
+    def build_fromVCols(cls, *cs):
+        c0_dim = cs[0].get_dim()
+        assert(c.get_dim() == c0_dim for c in cs)
+        rs = [[] for i in range(c0_dim)]
+        for i in range(c0_dim):
+            for j in range(len(cs)):
+                rs[i].append(cs[j].get(i))
+        return cls(cls.__RESTRICTION, c0_dim, len(cs), *rs)
+        
+
+    def get_flattened(self):
+        return [a for r in self.Ma for a in r]
 
     def __iter__(self):
-        return iter(self.M)
+        return iter(self.Ma)
     
     def set_add(self, M):
         return self
@@ -578,8 +686,15 @@ class Matrix:
 
     ###########################################################################
     # DISPLAY / FORMATTING: Methods/functions that format Matrices for output
-    def toString(self):
-        "/ {:>9.8G} \\\n| {:>9.8G} |\n\\ {:>9.8G} /".format(*tuple(self.__v))
+    def toString(self, padding=8, precision=1):
+        if self.__nRows == 1:
+            s = "[ "+"{:>7.6G} "*self.__nCols+"]"
+        else:
+            s = "/ "+"{:>7.6G} "*self.__nCols+"\\\n" + \
+                ("| "+"{:>7.6G} "*self.__nCols+"|\n")*(self.__nRows - 2) + \
+                "\\ "+"{:>7.6G} "*self.__nCols+"/"
+        return s.format(*tuple(self.get_flattened()))
+
 
     def print(self):
         print(self.toString())
