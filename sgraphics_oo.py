@@ -583,13 +583,15 @@ class Vector3D(Vector):
         return math.sqrt(Vector3D.dot(v, u))
 
         
-    ###########################################################################
+    ############################################################################
     # DISPLAY / FORMATTING: Methods/functions that format Vector3Ds for output
     def toString(self, col=False):
         if not col:
-            return "[  {:>9.8G}  {:>9.8G}  {:>9.8G}  ]".format(*tuple(self.__v))
+            return "[  {:>9.8G}  {:>9.8G}  {:>9.8G}  ]"\
+                   .format(*tuple(self.__v))
         else:
-            return "/ {:>9.8G} \\\n| {:>9.8G} |\n\\ {:>9.8G} /".format(*tuple(self.__v))
+            return "/ {:>9.8G} \\\n| {:>9.8G} |\n\\ {:>9.8G} /"\
+                   .format(*tuple(self.__v))
 
     def print(self, col=False):
         print(self.toString(col))
@@ -617,12 +619,13 @@ class Vector3D(Vector):
 ################################################################################
 class Matrix:
 
-    __RESTRICTION = 0x1F8EAA2
-     
     ############################################################################
     # CLASS VARIABLES:
+    
+    __RESTRICTION = 0x1F8EAA2
 
     # TODO: add class vars
+
 
     ############################################################################
     # CONSTRUCTORS:
@@ -646,11 +649,8 @@ class Matrix:
     def build_fromCols(cls, *cs):
         c0_len = len(cs[0])
         assert(len(c) == c0_len for c in cs)
-        rs = [[] for i in range(c0_len)]
-        for i in range(c0_len):
-            for j in range(len(cs)):
-                rs[i].append(cs[j][i])
-        return cls(cls.__RESTRICTION, c0_len, len(cs), *rs)
+        return cls(cls.__RESTRICTION, c0_len, len(cs), \
+                   *(cls.array_transpose(cs)))
 
 
     # build_fromVRows(*rs) builds the matrix with rows from row Vectors in rs
@@ -672,17 +672,151 @@ class Matrix:
             for j in range(len(cs)):
                 rs[i].append(cs[j].get(i))
         return cls(cls.__RESTRICTION, c0_dim, len(cs), *rs)
-        
 
-    def get_flattened(self):
-        return [a for r in self.Ma for a in r]
-
-    def __iter__(self):
-        return iter(self.Ma)
     
-    def set_add(self, M):
-        return self
+    ############################################################################
+    # GETTERS: Functions to get the matrix as an array (list of row lists or
+    #          list of column lists), a list of column vectors, a list of row
+    #          vectors, a flattened list (row or column prioritized), and the
+    #          dimensions of the matrix.
 
+
+    # get_array(prioritizeRow=True) gets the matrix as a list of lists,
+    #       prioritizing either row or col, row by default
+    def get_array(self, prioritizeRow=True):
+        if prioritizeRow:
+            return self.Ma
+        else:
+            return self.array_transpose(self.Ma)
+
+
+    # get_lVCols() gets the matrix as a list of column vectors
+    def get_lVCols(self):
+        return [Vector(*c) for c in self.array_transpose(self.Ma)]
+
+
+
+    # get_lVRows() gets the matrix as a list of row vectors
+    def get_lVRows(self):
+        return [Vector(*r) for r in self.Ma]
+
+
+
+    # get_flattened(prioritizeRow=True) gets the matrix as a flattened list,
+    #       prioritizing either row or col, row by default
+    def get_flattened(self, prioritizeRow=True):
+        if prioritizeRow:
+            return [a for r in self.Ma for a in r]
+        else:
+            return [a for r in self.array_transpose(self.Ma) for a in r]
+
+
+    # get_nRows() gets the number of rows of self
+    def get_nRows(self):
+        return self.__nRows
+    
+
+    # get_nCols() gets the number of columns of self
+    def get_nCols(self):
+        return self.__nCols
+
+
+    # get_dim() gets a tuple containing (nRows, nCols)
+    def get_dim(self):
+        return (self.__nRows, self.__nCols)
+
+
+
+    ############################################################################
+    # OPERATIONS: Instance operations at apply operations on self and return
+    #             references to new matrices.
+
+    # add(A) adds matrix A with same dimensions as self to self, returns a new
+    #       matrix.
+    def add(self, A):
+        assert(self.get_dim() == A.get_dim())
+        A_arr = A.get_array()
+        rs = [[self.Ma[i][j] + A_arr[i][j] for j in range(self.__nCols)] \
+              for i in range(self.__nRows)]
+        return Matrix.build_fromRows(*rs)
+
+    
+    # sub(A) subtracts matrix A with same dimensions as self from self, returns
+    #       a new matrix.
+    def sub(self, A):
+        assert(self.get_dim() == A.get_dim())
+        A_arr = A.get_array()
+        rs = [[self.Ma[i][j] - A_arr[i][j] for j in range(self.__nCols)] \
+              for i in range(self.__nRows)]
+        return Matrix.build_fromRows(*rs)
+
+
+    # smult(s) multiplies self by a scalar s, returns a new matrix.
+    def smult(self, s):
+        rs = [[s*self.Ma[i][j] for j in range(self.__nCols)] \
+              for i in range(self.__nRows)]
+        return Matrix.build_fromRows(*rs)
+
+    
+    # sdiv(s) divides self by a scalar s, returns a new matrix.
+    def sdiv(self, s):
+        assert(s != 0)
+        rs = [[self.Ma[i][j]/s for j in range(self.__nCols)] \
+              for i in range(self.__nRows)]
+        return Matrix.build_fromRows(*rs)
+
+
+    # transpose() returns self's transpose matrix.
+    def transpose(self):
+        return Matrix.build_fromCols(*self.Ma)
+
+
+    # postmult(A) multiplies self by A (with appropriate dimensions), and
+    #       returns the new matrix
+    def postmult(self, A):
+        assert(self.__nCols == A.get_nRows())
+        selfRows = self.get_lVRows()
+        ACols = A.get_lVCols()
+        rs = [[Vector.dot(row, col) for col in ACols] for row in selfRows]
+        return Matrix.build_fromRows(*rs)
+
+    
+    # premult(A) multiplies A (with appropriate dimensions) by self, and
+    #       returns the new matrix
+    def premult(self, A):
+        assert(A.get_nCols() == self.__nRows)
+        ARows = A.get_lVRows()
+        selfCols = self.get_lVCols()
+        rs = [[Vector.dot(row, col) for col in selfCols] for row in ARows]
+        return Matrix.build_fromRows(*rs)
+
+
+    # rowReduce() determines the row-reduced echelon form of self, and returns
+    #       the new matrix
+    def rowReduce(self):
+        lRows = self.get_lVRows()
+        # i, j is the coordinate of a candidate pivot
+        j = 0
+        for i in range(self.__nRows):
+            while ((j < self.__nCols) and (lRows[i].get(j) == 0)):
+                is0 = self.__findAndSwapRowWithNo0(lRows, i, j)
+                if is0:
+                    j+=1
+
+            if j == self.__nCols:
+                break
+
+            lRows[i].set_sdiv(lRows[i].get(j))
+
+            for i1 in range(self.__nRows):
+                if i1 != i:
+                    lRows[i1].set_sub(Vector.smult(lRows[i1].get(j), lRows[i]))
+
+            j+=1
+
+        return Matrix.build_fromVRows(*lRows)
+            
+        
 
     ###########################################################################
     # DISPLAY / FORMATTING: Methods/functions that format Matrices for output
@@ -698,6 +832,39 @@ class Matrix:
 
     def print(self):
         print(self.toString())
+
+
+    ############################################################################
+    # UTILITY: miscellaneous functions
+
+    
+    # array_transpose(arr) tranposes an 'array' in the form of a list of lists,
+    #       swapping rows with columns
+    @classmethod
+    def array_transpose(cls, arr):
+        arr_cols = len(arr[0])
+        arr_rows = len(arr)
+        arrT = [[] for i in range(arr_cols)]
+        for i in range(arr_cols):
+            for j in range(arr_rows):
+                arrT[i].append(arr[j][i])
+        return arrT
+
+
+    # __findAndSwapRowWithNo0(rs, i, j) finds the first row after the ith row 
+    #       that has a non-zero jth component and swaps that row with the ith
+    #       row; returns 0 on success or 1 on failure
+    @classmethod
+    def __findAndSwapRowWithNo0(cls, rs, i, j):
+        if i != (len(rs)-1):
+            for k in range(i+1, len(rs)):
+                if rs[k].get(j) != 0:
+                    temp = rs[k]
+                    rs[k] = rs[i]
+                    rs[i] = temp
+                    return 0
+        return 1
+        
 
 
 
@@ -720,3 +887,9 @@ a.set_add(c).set_add(c).set_add(c).set_sdiv(4)
 a.print(True) #-> [0,1,2]
 d = Vector3D.sub(b,a)
 d.print(True) #-> [3, 3, 3]
+
+
+A = Matrix.build_fromRows([2,4,6,8],[1,2,1,0])
+B = Matrix.build_fromRows([1,2,3],[1,4,5],[1,2,0],[0,0,1])
+C = Matrix.build_fromRows([0,1,2,-2],[0,3,5,1],[1,2,5,0])
+
