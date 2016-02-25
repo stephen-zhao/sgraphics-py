@@ -66,7 +66,7 @@ For example, `Vector(1,1,1).set_add(Vector(1,3,5)).set_sub(Vector(4,2,9)).set_sm
 | Function |  Description |
 |---------:|--------------|
 | `toString(col=False)` | returns a string representation of `self`, either as a column vector (`col=True`) or as a row vector (`col=False`) |
-| `print(col=False)` | prints `self` to the string, either as a column vector (`col=True`) or as a row vector (`col=False`) |
+| `print(col=False)` | prints `self` to the screen, either as a column vector (`col=True`) or as a row vector (`col=False`) |
 
 
 ### class Vector3D:
@@ -127,16 +127,58 @@ For example, `Vector3D.build_1().set_add(Vector3D(1,3,5)).set_sub(Vector3D(4,2,9
 | Function |  Description |
 |---------:|--------------|
 | `toString(col=False)` | returns a string representation of self, either as a column vector (`col=True`) or as a row vector (`col=False`) |
-| `print(col=False)` | prints self to the string, either as a column vector (`col=True`) or as a row vector (`col=False`) |
+| `print(col=False)` | prints self to the screen, either as a column vector (`col=True`) or as a row vector (`col=False`) |
 
 
 ### class Matrix:
-_@TODO: setter operations and standard operations for addition, subtraction, scalar multiplcation/division, matrix multiplcation, transposing, row reducing to RREF; functions for determining consistency, rank, nullity, solving and returning solutions_ (Many have already been implemented procedurally that require rewriting to object-oriented)
+_@TODO: functions for determining consistency, rank, nullity, solving and returning solutions_ (Many have already been implemented procedurally that require rewriting to object-oriented)
+
+#### CONSTRUCTORS: (class methods)
+The default constructor is private. Use the following functions to make a matrix.
+
+| Function |  Description |
+|---------:|--------------|
+| `build_fromRows(*rs)` | builds a matrix from lists representing the rows of the matrix. |
+| `build_fromCols(*cs)` | builds a matrix from lists representing the columns of the matrix. |
+| `build_fromVRows(*rs)` | builds a matrix from vectors representing the rows of the matrix. |
+| `build_fromVCols(*rs)` | builds a matrix from vectors representing the columns of the matrix. |
+
+#### GETTERS: (instance methods)
+| Function |  Description |
+|---------:|--------------|
+| `get(i, j)` | gets `self`'s (`i`, `j`)th entry |
+| `get_array(prioritizeRow=True)` | gets `self` as a list of lists, either prioritizing rows or columns; row by default |
+| `get_lVCols()` | gets `self` as a list of column vectors |
+| `get_lVRows()` | gets `self` as a list of row vectors |
+| `get_flattened(prioritizeRow=True)` | gets `self` as a flattened list, prioritizing rows or columns; row by default |
+| `get_nRows()` | gets the number of rows in `self` |
+| `get_nCols()` | gets the number of columns in `self` |
+| `get_dim()` | gets the number of rows and number of columns as a tuple |
+
+#### OPERATIONS: (instance methods)
+| Function |  Description |
+|---------:|--------------|
+| `add(A)` | adds matrix `A` to `self`; returns the new sum matrix |
+| `sub(A)` | subtracts matrix `A` from `self`; returns the new difference matrix |
+| `smult(s)` | multiplies `self` by scalar `s`; returns the new scaled matrix |
+| `sdiv(s)` | divides `self` by scalar `s`; returns the new quotient vector |
+| `transpose()` | returns `self`'s transpose matrix |
+| `postmult(A)` | multiplies `self` by `A`; returns the new product matrix |
+| `premult(A)` | multiplies `A` by `self`; returns the new product matrix |
+| `rowReduce()` | returns the Row Reduced Echelon Form of self |
+
+#### DISPLAY / FORMATTING: (instance methods)
+| Function |  Description |
+|---------:|--------------|
+| `toString()` | returns a string representation of `self` |
+| `print(col=False)` | prints `self` to screen |
+
 
 
 ### class Transformation:
 I'm unsure whether this will stay a class or be merged into the general matrix class
 _@TODO: functions to generate standard matrices for scaling, rotation, translation for R^3 (4x4 matrices), projection, perpendicular, identity, etc._ (Many have already been implemented procedurally that require rewriting to object-oriented)
+
 
 
 ### class Mesh:
