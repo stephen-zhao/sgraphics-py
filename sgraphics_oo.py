@@ -13,8 +13,10 @@ import math
 ################################################################################
 ################################################################################
 ################################################################################
+#
 # CLASS Vector: Represents vectors. Provides corresponding vector operations
 #               and related methods.
+#
 ################################################################################
 ################################################################################
 ################################################################################
@@ -307,14 +309,18 @@ class Vector:
 ################################################################################
 ################################################################################
 ################################################################################
+#
 # CLASS Vector3D: Represents vectors in R^3. Provides corresponding vector
 #                 operations and related methods.
+#
 ################################################################################
 ################################################################################
 ################################################################################
 
 # TODO: - refactor Vector3D to be subclass of Vector; many methods can be
 #           migrated and generalized
+#       - OR remove this class completely, as it is too specific; many methods
+#           can be moved to class Vector and tested for R^3 condition
 
 class Vector3D(Vector):
     
@@ -465,7 +471,7 @@ class Vector3D(Vector):
 
     # set_cross(u) sets self to self cross multiplied with u, returns self.
     def set_cross(self, u):
-        assert(u.dim == self.dim == cls.dim)
+        assert(u.dim == self.dim)
         temp = self.__v[:]
         self.__v[0] = temp[1]*u.get_z() - temp[2]*u.get_y()
         self.__v[1] = temp[2]*u.get_x() - temp[0]*u.get_z()
@@ -612,8 +618,10 @@ class Vector3D(Vector):
 ################################################################################
 ################################################################################
 ################################################################################
-# CLASS Matrix: Represents matrices of arbitrary size.
-# TODO: - entire thing
+#
+# CLASS Matrix: Represents matrices of arbitrary size. The class provides
+#               the necessary methods for operating and solving matrices.
+#
 ################################################################################
 ################################################################################
 ################################################################################
@@ -650,7 +658,7 @@ class Matrix:
         c0_len = len(cs[0])
         assert(len(c) == c0_len for c in cs)
         return cls(cls.__RESTRICTION, c0_len, len(cs), \
-                   *(cls.array_transpose(cs)))
+                   *(cls.array2D_transpose(cs)))
 
 
     # build_fromVRows(*rs) builds the matrix with rows from row Vectors in rs
@@ -673,6 +681,39 @@ class Matrix:
                 rs[i].append(cs[j].get(i))
         return cls(cls.__RESTRICTION, c0_dim, len(cs), *rs)
 
+
+
+    ############################################################################
+    # MORE CONSTRUCTORS (FOR STANDARD MATRICES OF LINEAR MAPPINGS):
+
+
+    # build_identity(n) builds the R^n identity matrix
+    @classmethod
+    def build_identity(cls, n):
+        return cls.build_fromRows(\
+            *[[1 if i == j else 0 for j in range(n)] for i in range(n)])
+
+
+    # build_smProj(v) builds the standard matrix for projection onto vector v
+    @classmethod
+    def build_smProj(cls, v):
+        return cls.build_fromVCols(\
+            *[Vector.smult(vi/Vector.dot(v,v),v) for vi in v])
+        
+
+    # build_smScale(v) builds the standard matrix for scaling by each
+    #   corresponding entry in vector v
+    @classmethod
+    def build_smScale(cls, v):
+        n = v.get_dim()
+        return cls.build_fromCols(\
+            *[[v.get(i) if j == i else 0 for j in range(n)] for i in range(n)])
+
+
+    @classmethod
+    def build_sm():
+        return 0
+
     
     ############################################################################
     # GETTERS: Functions to get the matrix as an array (list of row lists or
@@ -681,18 +722,22 @@ class Matrix:
     #          dimensions of the matrix.
 
 
-    # get_array(prioritizeRow=True) gets the matrix as a list of lists,
-    #       prioritizing either row or col, row by default
-    def get_array(self, prioritizeRow=True):
-        if prioritizeRow:
-            return self.Ma
-        else:
-            return self.array_transpose(self.Ma)
+    # get(i, j) gets the (i,j)th entry of the matrix
+    def get(self, i, j):
+        return self.Ma[i][j]
+
+
+    def get_lCols(self):
+        return self.array2D_transpose(self.Ma)
+
+
+    def get_lRows(self):
+        return self.Ma
 
 
     # get_lVCols() gets the matrix as a list of column vectors
     def get_lVCols(self):
-        return [Vector(*c) for c in self.array_transpose(self.Ma)]
+        return [Vector(*c) for c in self.array2D_transpose(self.Ma)]
 
 
 
@@ -708,7 +753,7 @@ class Matrix:
         if prioritizeRow:
             return [a for r in self.Ma for a in r]
         else:
-            return [a for r in self.array_transpose(self.Ma) for a in r]
+            return [a for r in self.array2D_transpose(self.Ma) for a in r]
 
 
     # get_nRows() gets the number of rows of self
@@ -725,6 +770,21 @@ class Matrix:
     def get_dim(self):
         return (self.__nRows, self.__nCols)
 
+    
+    def get_equalBlocks(self, height, width):
+        assert(self.__nCols % width == 0)
+        assert(self.__nRows % height == 0)
+        nRowsB = self.__nRows // height
+        nColsB = self.__nCols // width
+        blocks = [[] for i in range(nRowsB)]
+        for I in range(nRowsB):
+            for J in range(nColsB):
+                block = [[self.get(i,j) for j in range(J*width, (J+1)*width)] \
+                         for i in range(I*height, (I+1)*height)]
+                blockM = Matrix.build_fromRows(*block)
+                blocks[I].append(blockM)
+        return blocks
+        
 
 
     ############################################################################
@@ -735,7 +795,7 @@ class Matrix:
     #       matrix.
     def add(self, A):
         assert(self.get_dim() == A.get_dim())
-        A_arr = A.get_array()
+        A_arr = A.get_lRows()
         rs = [[self.Ma[i][j] + A_arr[i][j] for j in range(self.__nCols)] \
               for i in range(self.__nRows)]
         return Matrix.build_fromRows(*rs)
@@ -745,7 +805,7 @@ class Matrix:
     #       a new matrix.
     def sub(self, A):
         assert(self.get_dim() == A.get_dim())
-        A_arr = A.get_array()
+        A_arr = A.get_lRows()
         rs = [[self.Ma[i][j] - A_arr[i][j] for j in range(self.__nCols)] \
               for i in range(self.__nRows)]
         return Matrix.build_fromRows(*rs)
@@ -815,6 +875,25 @@ class Matrix:
             j+=1
 
         return Matrix.build_fromVRows(*lRows)
+
+
+    def augment(self, B, byCol=True):
+        if byCol:
+            ACols = self.get_lCols()
+            BCols = B.get_lCols()
+            return Matrix.build_fromCols(*ACols, *BCols)
+        else:
+            ARows = self.get_lRows()
+            BRows = B.get_lRows()
+            return Matrix.build_fromRows(*ARows, *BRows)
+
+
+    def invert(self):
+        assert(self.__nCols == self.__nRows)
+        augmented = self.augment(Matrix.build_identity(self.__nCols))
+        augmented = augmented.rowReduce()
+        return augmented.get_equalBlocks(self.__nRows,self.__nCols)[0][1]
+        
             
         
 
@@ -838,17 +917,17 @@ class Matrix:
     # UTILITY: miscellaneous functions
 
     
-    # array_transpose(arr) tranposes an 'array' in the form of a list of lists,
+    # array2D_transpose(arr) tranposes a 2D array in the form of a list of lists,
     #       swapping rows with columns
     @classmethod
-    def array_transpose(cls, arr):
-        arr_cols = len(arr[0])
-        arr_rows = len(arr)
-        arrT = [[] for i in range(arr_cols)]
-        for i in range(arr_cols):
-            for j in range(arr_rows):
-                arrT[i].append(arr[j][i])
-        return arrT
+    def array2D_transpose(cls, arr2d):
+        arr2d_cols = len(arr2d[0])
+        arr2d_rows = len(arr2d)
+        arr2dT = [[] for i in range(arr2d_cols)]
+        for i in range(arr2d_cols):
+            for j in range(arr2d_rows):
+                arr2dT[i].append(arr2d[j][i])
+        return arr2dT
 
 
     # __findAndSwapRowWithNo0(rs, i, j) finds the first row after the ith row 
@@ -864,6 +943,59 @@ class Matrix:
                     rs[i] = temp
                     return 0
         return 1
+
+
+    # isConsistent(rrefAb) determines if a system of linear variables (in
+    #   matrix form) (row reduced) is consistent (has one or more solutions)
+    def isConsistent(rrefAb):
+        last_row = rrefAb.get_lRows()[-1]
+        if (not(any(last_row[:-1])) and last_row[-1]):
+            return False
+        return True
+
+
+    # solveLDE(A, b=0, labels=0) prints out the solution of a linear system
+    #   in matrix form [A|b] if it exists. b=0 by default for a homogenous
+    #   system. Option to label the solution variables.
+    @classmethod
+    def solveLDE(cls, A, b=0, labels=0):
+        A_nRows = A.get_nRows()
+        A_nCols = A.get_nCols()
+        
+        if not b:
+            b = Vector.build_0(A_nRows)
+
+        if not labels:
+            labels = ["x"+str(i) for i in range(A_nCols)]
+
+        solns = [label+" = " for label in labels]
+
+        rrefAb = Matrix.build_fromVCols(*A.get_lVCols(),b).rowReduce()
+
+        if not cls.isConsistent(rrefAb):
+            print("Not Consistent!")
+
+        for j in range(A_nCols-1,-1,-1):
+            i = A_nRows - 1
+            while(not rrefAb.get(i,j)):
+                i -= 1
+
+            if rrefAb.get(i,j) == 1:
+                if (rrefAb.get(i, A_nCols) != 0):
+                    solns[j] += "{:.6G}".format(rrefAb.get(i, A_nCols))
+                for j1 in range(A_nCols):
+                    if (j1 != j) and (rrefAb.get(i,j1) != 0):
+                        solns[j] += ("- ({:.6G})"+labels[j1])\
+                                    .format(rrefAb.get(i,j1))
+
+        print(solns)
+
+            
+                    
+        
+
+
+    
         
 
 
@@ -889,7 +1021,7 @@ d = Vector3D.sub(b,a)
 d.print(True) #-> [3, 3, 3]
 
 
-A = Matrix.build_fromRows([2,4,6,8],[1,2,1,0])
-B = Matrix.build_fromRows([1,2,3],[1,4,5],[1,2,0],[0,0,1])
-C = Matrix.build_fromRows([0,1,2,-2],[0,3,5,1],[1,2,5,0])
-
+C = Matrix.build_fromCols([1,1,0,1],[5,4,3,2],[6,7,8,10],[1,1,2,1])
+D = Matrix.build_fromCols([-13.5,3,2,-12.5],[20,-4,-3,18],[-0.5,0,0,0.5],[-5.5,1,1,-5.5])
+E = Matrix.build_identity(4)
+A = C.augment(E)
